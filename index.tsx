@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
 import { GoogleGenAI, GenerateContentResponse, Type } from "@google/genai";
@@ -235,7 +234,8 @@ const styles: { [key: string]: React.CSSProperties } = {
     },
     palette: {
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fit, 100px)',
+        justifyContent: 'center',
         gap: '15px',
         padding: '20px',
         maxHeight: '400px',
@@ -266,10 +266,6 @@ const styles: { [key: string]: React.CSSProperties } = {
         marginTop: '8px',
         fontSize: '14px',
         fontWeight: 'bold',
-    },
-    swatchLabLabel: {
-        fontSize: '11px',
-        color: '#777',
     },
     loadMoreButton: {
         marginTop: '20px',
@@ -337,7 +333,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     },
     clickableArea: {
         cursor: 'pointer',
-        transition: 'fill 0.2s',
+        transition: 'fill 0.2s, stroke 0.2s, stroke-width 0.2s',
         mixBlendMode: 'overlay',
     },
     areaLabel: {
@@ -412,6 +408,36 @@ const styles: { [key: string]: React.CSSProperties } = {
         animation: 'spin 1s linear infinite',
         margin: '20px auto',
     },
+    swatchContainerRelative: {
+        position: 'relative',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        textAlign: 'center',
+        padding: '5px 0',
+    },
+    removeButton: {
+        position: 'absolute',
+        top: -5,
+        right: -5,
+        width: '24px',
+        height: '24px',
+        borderRadius: '50%',
+        border: '1px solid #ddd',
+        backgroundColor: 'white',
+        color: '#888',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: '20px',
+        lineHeight: '22px',
+        padding: 0,
+        fontWeight: 'bold',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+        transition: 'background-color 0.2s, color 0.2s',
+        zIndex: 10,
+    },
 };
 
 // --- REACT COMPONENTS ---
@@ -422,15 +448,27 @@ const Header = () => (
     </header>
 );
 
-const StepIndicator = ({ currentStep }: { currentStep: number }) => {
+const StepIndicator = ({ currentStep, onStepClick }: { currentStep: number; onStepClick: (step: number) => void; }) => {
     const steps = ['1. Chọn ảnh', '2. Chọn màu', '3. Phối màu & Tải về'];
     return (
         <div style={styles.stepIndicatorContainer}>
-            {steps.map((step, index) => (
-                <div key={step} style={{ ...styles.step, ...(currentStep === index + 1 ? styles.stepActive : {}) }}>
-                    {step}
-                </div>
-            ))}
+            {steps.map((step, index) => {
+                const stepNumber = index + 1;
+                const isClickable = stepNumber < currentStep;
+                return (
+                    <div
+                        key={step}
+                        style={{
+                            ...styles.step,
+                            ...(currentStep === stepNumber ? styles.stepActive : {}),
+                            cursor: isClickable ? 'pointer' : 'default',
+                        }}
+                        onClick={() => isClickable && onStepClick(stepNumber)}
+                    >
+                        {step}
+                    </div>
+                );
+            })}
         </div>
     );
 };
@@ -463,8 +501,11 @@ const Step1_ImageSelection = ({ onImageSelect }: { onImageSelect: (image: Predef
 };
 
 
-const Step2_ColorSelection = ({ onColorsSelect }: { onColorsSelect: (colors: Color[]) => void }) => {
-    const [selectedColors, setSelectedColors] = useState<Color[]>([]);
+const Step2_ColorSelection = ({ onNextStep, selectedColors, onToggleColor }: { 
+    onNextStep: () => void; 
+    selectedColors: Color[]; 
+    onToggleColor: (color: Color) => void;
+}) => {
     const [activeTab, setActiveTab] = useState<string>(Object.keys(colorData)[0]);
     const [visibleCount, setVisibleCount] = useState(100);
     const PALETTE_PAGE_SIZE = 100;
@@ -472,16 +513,10 @@ const Step2_ColorSelection = ({ onColorsSelect }: { onColorsSelect: (colors: Col
     useEffect(() => {
         setVisibleCount(PALETTE_PAGE_SIZE);
     }, [activeTab]);
-
-    const toggleColor = (color: Color) => {
-        setSelectedColors(prev =>
-            prev.find(c => c.id === color.id) ? prev.filter(c => c.id !== color.id) : [...prev, color]
-        );
-    };
     
     const handleNextStep = () => {
         if (selectedColors.length > 0) {
-            onColorsSelect(selectedColors);
+            onNextStep();
         } else {
             alert('Vui lòng chọn ít nhất một màu.');
         }
@@ -511,10 +546,9 @@ const Step2_ColorSelection = ({ onColorsSelect }: { onColorsSelect: (colors: Col
                         const hex = lab2rgb(color.l, color.a, color.b);
                         const isSelected = selectedColors.some(c => c.id === color.id);
                         return (
-                            <div key={color.id} style={styles.swatchContainer} onClick={() => toggleColor(color)}>
+                            <div key={color.id} style={styles.swatchContainer} onClick={() => onToggleColor(color)}>
                                 <div style={{ ...styles.swatch, backgroundColor: hex, ...(isSelected ? styles.swatchSelected : {}) }}></div>
                                 <span style={styles.swatchLabel}>{color.id}</span>
-                                <span style={styles.swatchLabLabel}>{`L:${color.l} a:${color.a} b:${color.b}`}</span>
                             </div>
                         );
                     })}
@@ -537,7 +571,6 @@ const Step2_ColorSelection = ({ onColorsSelect }: { onColorsSelect: (colors: Col
                      <div key={color.id} style={styles.swatchContainer}>
                         <div style={{ ...styles.swatch, backgroundColor: lab2rgb(color.l, color.a, color.b) }}></div>
                         <span style={styles.swatchLabel}>{color.id}</span>
-                        <span style={styles.swatchLabLabel}>{`L:${color.l} a:${color.a} b:${color.b}`}</span>
                     </div>
                 ))}
                 </div>
@@ -548,28 +581,39 @@ const Step2_ColorSelection = ({ onColorsSelect }: { onColorsSelect: (colors: Col
     );
 };
 
-const Step3_ColorMixing = ({ image, selectedColors, onReset }: { image: PredefinedImage, selectedColors: Color[], onReset: () => void }) => {
+const Step3_ColorMixing = ({ image, selectedColors, onReset, onColorRemove }: { 
+    image: PredefinedImage, 
+    selectedColors: Color[], 
+    onReset: () => void,
+    onColorRemove: (color: Color) => void 
+}) => {
   const [activeColor, setActiveColor] = useState<string>(lab2rgb(selectedColors[0].l, selectedColors[0].a, selectedColors[0].b));
   const [isLoading, setIsLoading] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<any[]>([]);
   const [areaColors, setAreaColors] = useState<Record<string, string>>({});
+  const [draggedOverArea, setDraggedOverArea] = useState<string | null>(null);
   const finalImageRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Reset colors to the first selected color when the image changes
     const init: Record<string, string> = {};
     const firstColor = lab2rgb(selectedColors[0].l, selectedColors[0].a, selectedColors[0].b);
     setActiveColor(firstColor);
     image.areas.forEach(a => {
-        if (a.id !== 'window-area' && a.id !== 'floor') { // Filter window and floor
+        if (a.id !== 'window-area' && a.id !== 'floor') {
             init[a.id] = firstColor;
         }
     });
     setAreaColors(init);
-  }, [image.id, selectedColors]);
+  }, [image.id]);
+
+  useEffect(() => {
+    const activeColorExists = selectedColors.some(c => lab2rgb(c.l, c.a, c.b) === activeColor);
+    if (!activeColorExists && selectedColors.length > 0) {
+        setActiveColor(lab2rgb(selectedColors[0].l, selectedColors[0].a, selectedColors[0].b));
+    }
+  }, [selectedColors, activeColor]);
 
 
-  // Download function
   const handleDownload = async () => {
     const { default: html2canvas } = await import('html2canvas');
     if (!finalImageRef.current) return;
@@ -614,19 +658,19 @@ const Step3_ColorMixing = ({ image, selectedColors, onReset }: { image: Predefin
       <div style={styles.mixingLayout}>
         <div style={styles.imageDisplayContainer}>
           <h3 style={styles.stepTitle}>Phối màu trực tiếp</h3>
+          <p style={styles.stepDescription}>Nhấn vào một màu bên phải để chọn, sau đó nhấn vào khu vực trên ảnh để tô màu. Hoặc, kéo và thả màu vào khu vực bạn muốn.</p>
           <div
             ref={finalImageRef}
             style={{
-              position: 'relative',
+              display: 'grid',
               width: '100%',
-              overflow: 'visible',
             }}
           >
             <img
               src={image.url}
               alt={image.name}
               style={{
-                display: 'block',
+                gridArea: '1 / 1 / 2 / 2',
                 width: '100%',
                 height: 'auto',
                 pointerEvents: 'none',
@@ -635,32 +679,39 @@ const Step3_ColorMixing = ({ image, selectedColors, onReset }: { image: Predefin
             />
             <svg
               viewBox={image.viewBox}
-              preserveAspectRatio="none"
+              preserveAspectRatio="xMidYMid meet"
               style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '120%', 
-                height: '120%',
+                gridArea: '1 / 1 / 2 / 2',
+                width: '100%',
+                height: '100%',
                 pointerEvents: 'auto',
-                overflow: 'visible',
                 zIndex: 5,
               }}
             >
               {image.areas.filter(area => area.id !== 'floor').map(area => (
-                <g key={area.id} onClick={() => setAreaColors(prev => ({ ...prev, [area.id]: activeColor }))}>
+                <g 
+                    key={area.id} 
+                    onClick={() => setAreaColors(prev => ({ ...prev, [area.id]: activeColor }))}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDragEnter={(e) => { e.preventDefault(); setDraggedOverArea(area.id); }}
+                    onDragLeave={(e) => { e.preventDefault(); setDraggedOverArea(null); }}
+                    onDrop={(e) => {
+                        e.preventDefault();
+                        setDraggedOverArea(null);
+                        document.body.style.cursor = 'default';
+                        const colorHex = e.dataTransfer.getData('colorHex');
+                        if (colorHex) {
+                            setAreaColors(prev => ({ ...prev, [area.id]: colorHex }));
+                        }
+                    }}
+                >
                   <polygon
                     points={area.points}
                     style={{
-                      ...styles.clickableArea,
-                     fill: areaColors[area.id]
-  ? hexToRgba(areaColors[area.id], 0.40)
-  : 'rgba(255, 0, 0, 0.05)',
-                      stroke: areaColors[area.id] || area.id === 'window-area'
-                        ? 'transparent'
-                        : 'red',
-                      strokeWidth:
-                        areaColors[area.id] || area.id === 'window-area' ? 0 : 3,
+                        ...styles.clickableArea,
+                        fill: areaColors[area.id] ? hexToRgba(areaColors[area.id], 0.40) : 'rgba(255, 0, 0, 0.05)',
+                        stroke: draggedOverArea === area.id ? '#007bff' : (areaColors[area.id] || area.id === 'window-area' ? 'transparent' : 'red'),
+                        strokeWidth: draggedOverArea === area.id ? 15 : (areaColors[area.id] || area.id === 'window-area' ? 0 : 3),
                     }}
                   />
                    {area.id !== 'window-area' && !areaColors[area.id] && (
@@ -685,8 +736,21 @@ const Step3_ColorMixing = ({ image, selectedColors, onReset }: { image: Predefin
               {selectedColors.map(color => {
                 const hex = lab2rgb(color.l, color.a, color.b);
                 return (
-                  <div key={color.id} style={styles.swatchContainer} onClick={() => setActiveColor(hex)}>
-                    <div style={{ ...styles.swatch, backgroundColor: hex, width: 60, height: 60, ...(activeColor === hex ? styles.swatchSelected : {}) }} />
+                  <div key={color.id} style={styles.swatchContainerRelative}>
+                    <div 
+                        draggable="true"
+                        onDragStart={(e) => {
+                            e.dataTransfer.setData('colorHex', hex);
+                            document.body.style.cursor = 'grabbing';
+                        }}
+                        onDragEnd={() => {
+                            document.body.style.cursor = 'default';
+                            setDraggedOverArea(null);
+                        }}
+                        style={{ ...styles.swatch, backgroundColor: hex, width: 60, height: 60, cursor: 'grab', ...(activeColor === hex ? styles.swatchSelected : {}) }} 
+                        onClick={() => setActiveColor(hex)} 
+                    />
+                    <button onClick={() => onColorRemove(color)} style={styles.removeButton}>&times;</button>
                     <span style={styles.swatchLabel}>{color.id}</span>
                   </div>
                 );
@@ -742,15 +806,37 @@ const App = () => {
             document.head.removeChild(styleSheet);
         };
     }, []);
+    
+    useEffect(() => {
+        if (currentStep === 3 && selectedColors.length === 0) {
+            alert("Bạn đã xoá hết màu. Vui lòng chọn lại màu.");
+            setCurrentStep(2);
+        }
+    }, [selectedColors, currentStep]);
 
     const handleImageSelect = (image: PredefinedImage) => {
         setSelectedImage(image);
         setCurrentStep(2);
     };
 
-    const handleColorsSelect = (colors: Color[]) => {
-        setSelectedColors(colors);
-        setCurrentStep(3);
+    const handleToggleColor = useCallback((color: Color) => {
+        setSelectedColors(prev =>
+            prev.find(c => c.id === color.id) 
+                ? prev.filter(c => c.id !== color.id) 
+                : [...prev, color]
+        );
+    }, []);
+
+    const handleRemoveColor = useCallback((colorToRemove: Color) => {
+        setSelectedColors(prev => prev.filter(c => c.id !== colorToRemove.id));
+    }, []);
+
+    const handleProceedToMixing = () => {
+        if (selectedColors.length > 0) {
+            setCurrentStep(3);
+        } else {
+            alert('Vui lòng chọn ít nhất một màu.');
+        }
     };
 
     const handleReset = () => {
@@ -758,18 +844,39 @@ const App = () => {
         setSelectedImage(null);
         setSelectedColors([]);
     };
+    
+    const handleStepClick = (step: number) => {
+        if (step < currentStep) {
+            if (step === 1) {
+                handleReset();
+            } else {
+                setCurrentStep(step);
+            }
+        }
+    };
+
 
     const renderStep = () => {
         switch (currentStep) {
             case 1:
                 return <Step1_ImageSelection onImageSelect={handleImageSelect} />;
             case 2:
-                return <Step2_ColorSelection onColorsSelect={handleColorsSelect} />;
+                return <Step2_ColorSelection 
+                            onNextStep={handleProceedToMixing} 
+                            selectedColors={selectedColors}
+                            onToggleColor={handleToggleColor}
+                        />;
             case 3:
                 if (selectedImage && selectedColors.length > 0) {
-                    return <Step3_ColorMixing image={selectedImage} selectedColors={selectedColors} onReset={handleReset} />;
+                    return <Step3_ColorMixing 
+                                image={selectedImage} 
+                                selectedColors={selectedColors} 
+                                onReset={handleReset} 
+                                onColorRemove={handleRemoveColor}
+                            />;
                 }
-                handleReset();
+                // If we land here without colors/image, something is wrong, reset.
+                // The useEffect hook will handle navigation if colors run out.
                 return null;
             default:
                 return <Step1_ImageSelection onImageSelect={handleImageSelect} />;
@@ -780,7 +887,7 @@ const App = () => {
         <div style={styles.container}>
             <Header />
             <main style={styles.main}>
-                <StepIndicator currentStep={currentStep} />
+                <StepIndicator currentStep={currentStep} onStepClick={handleStepClick} />
                 {renderStep()}
             </main>
             <footer style={styles.footer}>
