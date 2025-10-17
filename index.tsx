@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
 import { GoogleGenAI, GenerateContentResponse, Type } from "@google/genai";
@@ -29,7 +30,7 @@ const predefinedImages: PredefinedImage[] = [
  {
   id: 'interior-lavis-auto',
   name: 'Phòng Lavis AI tự nhận diện',
-  url: '/interior-lavis-auto.jpg',
+  url: 'https://simplythebest.vn/wp-content/uploads/2025/10/—Pngtree—immaculate-interiors-and-decor-a_15228478-scaled.jpg',
   viewBox: '0 0 1920 1280',
   areas: [
       { id: 'ceiling', points: '18.64,-6.45 1830.64,-1.79 1480.83,243.08 410.42,240.75', labelPos: { x: 933.97, y: 108.35 } },
@@ -39,6 +40,18 @@ const predefinedImages: PredefinedImage[] = [
       { id: 'floor', points: '317,773 1240,759 1920,1280 0,1280', labelPos: { x: 960, y: 1180 } }
     ]
 },
+{
+  id: 'exterior-lavis-auto',
+  name: 'Không gian ngoại thất',
+  url: 'https://simplythebest.vn/wp-content/uploads/2025/10/z7091425106635_707168f0bb36a92828c2596d0529f5de.jpg',
+  viewBox: '0 0 2560 1440',
+  areas: [
+    { id: 'roof', points: '1116.25,230.13 1464.50,481.99 1455.17,942.17 1116.25,976.37', labelPos: { x: 1274.65, y: 651.74 } },
+    { id: 'main-wall', points: '1461.39,628.13 2225.71,481.94 2229.39,873.77 1455.17,942.17', labelPos: { x: 1857.30, y: 729.89 } },
+    { id: 'side-wall', points: '220.76,404.26 939.02,80.89 945.24,942.17 226.98,1016.80', labelPos: { x: 603.15, y: 605.27 } },
+    { id: 'foundation', points: '2223.17,1309.07 2232.50,264.34 2338.22,230.13 2335.11,1290.42', labelPos: { x: 2282.37, y: 778.55 } }
+  ]
+}
 ];
 
 // --- UTILITY FUNCTIONS ---
@@ -581,11 +594,8 @@ const Step3_ColorMixing = ({ image, selectedColors, onReset, onColorRemove }: {
     onColorRemove: (color: Color) => void
 }) => {
     const [activeColor, setActiveColor] = useState<string>(lab2rgb(selectedColors[0].l, selectedColors[0].a, selectedColors[0].b));
-    const [isLoading, setIsLoading] = useState(false);
-    const [aiSuggestions, setAiSuggestions] = useState<any[]>([]);
     const [areaColors, setAreaColors] = useState<Record<string, string>>({});
     const [draggedOverArea, setDraggedOverArea] = useState<string | null>(null);
-    const finalImageRef = useRef<HTMLDivElement>(null);
     const svgRef = useRef<SVGSVGElement>(null);
 
     const [editableAreas, setEditableAreas] = useState<SvgArea[]>(() => JSON.parse(JSON.stringify(image.areas)));
@@ -706,77 +716,16 @@ const Step3_ColorMixing = ({ image, selectedColors, onReset, onColorRemove }: {
         };
     }, [handleMouseMove, handleMouseUp]);
 
+    const handleShowSaveInstructions = () => {
+        alert(
+`Để lưu lại ảnh phối màu, bạn có thể sử dụng các công cụ chụp màn hình có sẵn:
 
-   const handleDownload = async () => {
-  try {
-    // 1️⃣ Tạo ảnh nền dưới dạng base64
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.src = image.url;
+- Zalo: Nhấn tổ hợp phím Ctrl + Alt + A để chụp vùng bạn muốn.
+- Windows: Nhấn phím Print Screen (PrtScn) rồi dán (Ctrl+V) vào Zalo, Paint, hoặc Word.
 
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-
-      canvas.width = img.width;
-      canvas.height = img.height;
-
-      // 2️⃣ Vẽ ảnh nền
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-      // 3️⃣ Vẽ vùng phối màu (areaColors)
-      editableAreas.forEach(area => {
-        const color = areaColors[area.id];
-        if (!color) return;
-
-        const path = new Path2D(area.points.replace(/ /g, ' L') + ' Z');
-        ctx.fillStyle = color;
-        ctx.globalAlpha = 0.4;
-        ctx.fill(path);
-      });
-
-      // 4️⃣ Xuất ảnh PNG
-      const link = document.createElement('a');
-      link.download = `phoi-mau-lavis-${new Date().toISOString().replace(/[:.]/g, '-')}.png`;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
+Sau đó bạn có thể lưu lại ảnh từ các ứng dụng trên.`
+        );
     };
-
-    img.onerror = (err) => {
-      console.error('Không tải được ảnh:', err);
-      alert('Ảnh bị chặn hoặc không truy cập được.');
-    };
-  } catch (e) {
-    console.error('Lỗi khi lưu ảnh:', e);
-  }
-};
-
-
-
-    const getAiSuggestions = async () => {
-        setIsLoading(true);
-        setAiSuggestions([]);
-        try {
-            // ... AI call logic would go here
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const applySuggestion = (suggestion: any) => {
-        const newAreaColors = { ...areaColors };
-        const suggestionHexColors = suggestion.palette;
-        editableAreas
-            .filter(a => a.id !== 'window-area' && a.id !== 'floor')
-            .forEach((area, index) => {
-                newAreaColors[area.id] = suggestionHexColors[index % suggestionHexColors.length];
-            });
-        setAreaColors(newAreaColors);
-    };
-
 
     return (
         <div style={styles.mixingContainer}>
@@ -784,7 +733,7 @@ const Step3_ColorMixing = ({ image, selectedColors, onReset, onColorRemove }: {
                 <div style={styles.imageDisplayContainer}>
                     <h3 style={styles.stepTitle}>Phối màu trực tiếp</h3>
                     <p style={styles.stepDescription}>Nhấn vào một màu bên phải để chọn, sau đó nhấn vào khu vực trên ảnh để tô màu. Hoặc, kéo và thả màu vào khu vực bạn muốn.</p>
-                    <div ref={finalImageRef} style={{ display: 'grid', width: '100%', position: 'relative' }}>
+                    <div style={{ display: 'grid', width: '100%', position: 'relative' }}>
                         <img
                             src={image.url}
                             alt={image.name}
@@ -914,28 +863,9 @@ const Step3_ColorMixing = ({ image, selectedColors, onReset, onColorRemove }: {
                         </div>
                     )}
 
-
-                    <div style={styles.toolSection}>
-                        <h4 style={styles.toolTitle}>Gợi ý từ AI</h4>
-                        <button onClick={getAiSuggestions} disabled={isLoading} style={{ ...styles.primaryButton, width: '100%', marginTop: 0 }}>
-                            {isLoading ? 'Đang xử lý...' : 'Lấy gợi ý'}
-                        </button>
-                        {isLoading && <div style={styles.loader}></div>}
-                        <div>
-                            {aiSuggestions.map((s, i) => (
-                                <div key={i} style={styles.suggestionCard} onClick={() => applySuggestion(s)}>
-                                    <div style={styles.suggestionColors}>
-                                        {s.palette.map((hex: string) => <div key={hex} style={{ ...styles.suggestionColorDot, backgroundColor: hex }} />)}
-                                    </div>
-                                    <p style={styles.suggestionReason}>{s.reason}</p>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
                     <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
                         <button onClick={onReset} style={styles.secondaryButton}>Làm lại từ đầu</button>
-                        <button onClick={handleDownload} style={{ ...styles.primaryButton, flex: 1, backgroundColor: '#007bff' }}>Tải ảnh về</button>
+                        <button onClick={handleShowSaveInstructions} style={{ ...styles.primaryButton, flex: 1, backgroundColor: '#007bff' }}>Hướng dẫn lưu ảnh</button>
                     </div>
                 </div>
             </div>
