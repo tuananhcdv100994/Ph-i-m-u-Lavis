@@ -29,7 +29,7 @@ const colorData: ColorData = (window as any).colorData;
 const predefinedImages: PredefinedImage[] = [
  {
   id: 'interior-lavis-auto',
-  name: 'Phòng Lavis AI tự nhận diện',
+  name: 'Không gian nội thất',
   url: 'https://simplythebest.vn/wp-content/uploads/2025/10/—Pngtree—immaculate-interiors-and-decor-a_15228478-scaled.jpg',
   viewBox: '0 0 1920 1280',
   areas: [
