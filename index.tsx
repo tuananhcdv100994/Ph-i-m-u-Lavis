@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
-import { GoogleGenAI, GenerateContentResponse, Type } from "@google/genai";
+import { GoogleGenAI, GenerateContentResponse, Type, Chat } from "@google/genai";
 
 // --- TYPES AND DATA ---
 
@@ -29,9 +29,9 @@ const colorData: ColorData = (window as any).colorData;
 const predefinedImages: PredefinedImage[] = [
  {
   id: 'interior-lavis-auto',
-  name: 'Không gian nội thất',
+  name: 'Không gian nội thất - Mẫu 1',
   url: 'https://simplythebest.vn/wp-content/uploads/2025/10/—Pngtree—immaculate-interiors-and-decor-a_15228478-scaled.jpg',
-  viewBox: '0 0 1920 1280',
+  viewBox: '0 0 1920 1080',
   areas: [
       { id: 'ceiling', points: '18.64,-6.45 1830.64,-1.79 1480.83,243.08 410.42,240.75', labelPos: { x: 933.97, y: 108.35 } },
       { id: 'left-wall', points: '-4.67,56.33 380.10,261.74 382.44,777.12 -4.67,893.33', labelPos: { x: 172.99, y: 495.78 } },
@@ -41,8 +41,21 @@ const predefinedImages: PredefinedImage[] = [
     ]
 },
 {
+  id: 'interior-lavis-auto-2',
+  name: 'Không gian nội thất - Mẫu 2',
+  url: 'https://simplythebest.vn/wp-content/uploads/2025/10/pngtree-minimalist-living-space-a-bright-and-empty-white-room-interior-3d-image_13593960.png',
+  viewBox: '0 0 1920 1080',
+  areas: [
+    { id: 'left-wall', points: '0.00,172.57 319.47,327.03 314.81,758.46 4.65,856.41', labelPos: { x: 147.89715832621144, y: 526.1809556736165 } },
+    { id: 'back-wall', points: '317.14,336.36 1450.51,336.36 1443.52,751.46 314.81,756.13', labelPos: { x: 880.440026158362, y: 544.9357206357013 } },
+    { id: 'right-wall', points: '1448.18,341.02 1923.92,100.82 1914.59,907.71 1443.52,751.46', labelPos: { x: 1708.2465674323519, y: 522.9635313118794 } },
+    { id: 'floor', points: '0,910 650,830 1350,830 1920,910 1920,1280 0,1280', labelPos: { x: 973, y: 1006 } },
+    { id: 'ceiling', points: '-149.27,9.88 1818.98,-20.44 1410.87,285.06 377.77,285.06', labelPos: { x: 870.4544988733553, y: 124.65243410426255 } }
+  ]
+},
+{
   id: 'exterior-lavis-auto',
-  name: 'Không gian ngoại thất',
+  name: 'Ngoại thất - Mẫu 1',
   url: 'https://simplythebest.vn/wp-content/uploads/2025/10/z7091425106635_707168f0bb36a92828c2596d0529f5de.jpg',
   viewBox: '0 0 2560 1440',
   areas: [
@@ -50,6 +63,20 @@ const predefinedImages: PredefinedImage[] = [
     { id: 'main-wall', points: '1461.39,628.13 2225.71,481.94 2229.39,873.77 1455.17,942.17', labelPos: { x: 1857.30, y: 729.89 } },
     { id: 'side-wall', points: '220.76,404.26 939.02,80.89 945.24,942.17 226.98,1016.80', labelPos: { x: 603.15, y: 605.27 } },
     { id: 'foundation', points: '2223.17,1309.07 2232.50,264.34 2338.22,230.13 2335.11,1290.42', labelPos: { x: 2282.37, y: 778.55 } }
+  ]
+},
+{
+  id: 'exterior-lavis-auto-2',
+  name: 'Ngoại thất - Mẫu 2',
+  url: 'https://simplythebest.vn/wp-content/uploads/2025/10/hinh-ngoai-that-2-7469-scaled.jpg',
+  viewBox: '0 0 2560 1440',
+  areas: [
+    { id: 'main-wall', points: '2058.38,990.46 2562.09,1142.82 1971.32,1189.46 1588.87,1055.76', labelPos: { x: 2055.8176128712284, y: 1094.9267830860053 } },
+    { id: 'garage-wall', points: '310.93,707.51 581.44,573.81 578.34,900.29 320.26,981.14', labelPos: { x: 451.2246590450268, y: 788.0450716115596 } },
+    { id: 'balcony-wall', points: '873.72,303.30 1041.63,365.49 342.03,701.30 254.97,663.98', labelPos: { x: 659.90569816736, y: 491.81563095892085 } },
+    { id: 'roof-trim', points: '1159.78,744.83 1156.67,1086.85 1427.18,1046.43 1616.85,1077.52 1626.18,741.72 1427.18,670.20', labelPos: { x: 1390.1807099758198, y: 884.8988151869524 } },
+    { id: 'accent-panels', points: '771.11,586.25 1026.08,471.20 1029.19,981.14 771.11,1027.78', labelPos: { x: 902.4884201177965, y: 766.057875778678 } },
+    { id: 'pillar', points: '1103.81,238.01 1436.51,54.55 1433.40,629.78 1106.92,729.28', labelPos: { x: 1274.347012980372, y: 410.27020083288 } }
   ]
 }
 ];
@@ -71,40 +98,9 @@ function lab2rgb(l: number, a: number, b: number) {
     return `#${toHex(r)}${toHex(g)}${toHex(b_val)}`;
 }
 
-// Convert a hex color string to an RGBA string with a specified alpha
-function hexToRgba(hex: string, alpha: number = 1) {
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    if (!result) return hex;
-    const r = parseInt(result[1], 16);
-    const g = parseInt(result[2], 16);
-    const b = parseInt(result[3], 16);
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
-
-// FIX: New utility function to convert image URL to base64 using a canvas, which is more robust against CORS issues than fetch.
-async function urlToBase64(url: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.crossOrigin = 'Anonymous';
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return reject(new Error('Không tạo được context'));
-      ctx.drawImage(img, 0, 0);
-      resolve(canvas.toDataURL('image/png'));
-    };
-    img.onerror = (err) => reject(err);
-    img.src = url;
-  });
-}
-
-
-// FIX: Define the styles object that was missing, causing numerous errors.
 const styles: { [key: string]: React.CSSProperties } = {
     container: {
-        fontFamily: "'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+        fontFamily: "'Be Vietnam Pro', sans-serif",
         color: '#333',
         backgroundColor: '#f4f7f6',
         minHeight: '100vh',
@@ -114,23 +110,23 @@ const styles: { [key: string]: React.CSSProperties } = {
     main: {
         flex: 1,
         width: '100%',
-        maxWidth: '1400px',
+        maxWidth: '1600px',
         margin: '0 auto',
         padding: '20px',
         boxSizing: 'border-box',
     },
     header: {
-        backgroundColor: '#ffffff',
-        padding: '15px 30px',
+        backgroundColor: '#005a9e',
+        padding: '10px 30px',
         borderBottom: '1px solid #e0e0e0',
         boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-        textAlign: 'center',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
-    headerTitle: {
-        margin: 0,
-        fontSize: '24px',
-        fontWeight: 600,
-        color: '#005a9e',
+    logo: {
+      height: '60px',
+      width: 'auto',
     },
     footer: {
         backgroundColor: '#333',
@@ -143,40 +139,48 @@ const styles: { [key: string]: React.CSSProperties } = {
         display: 'flex',
         justifyContent: 'space-around',
         marginBottom: '40px',
-        border: '1px solid #ddd',
-        borderRadius: '8px',
-        overflow: 'hidden',
+        backgroundColor: 'white',
+        borderRadius: '50px',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+        padding: '5px',
+        position: 'relative',
     },
     step: {
         flex: 1,
-        padding: '15px',
+        padding: '12px 20px',
         textAlign: 'center',
-        backgroundColor: '#f0f0f0',
+        backgroundColor: 'transparent',
         color: '#666',
-        borderRight: '1px solid #ddd',
+        borderRadius: '50px',
+        fontWeight: 500,
+        transition: 'color 0.3s, background-color 0.3s',
+        zIndex: 2,
+        border: 'none',
+        fontSize: '16px',
     },
     stepActive: {
         backgroundColor: '#007bff',
         color: 'white',
-        fontWeight: 'bold',
+        boxShadow: '0 2px 5px rgba(0,123,255,0.3)',
     },
     stepContainer: {
         backgroundColor: 'white',
         padding: '40px',
-        borderRadius: '8px',
-        boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
+        borderRadius: '12px',
+        boxShadow: '0 6px 16px rgba(0,0,0,0.07)',
         textAlign: 'center',
     },
     stepTitle: {
         fontSize: '28px',
         marginBottom: '10px',
         color: '#333',
+        fontWeight: 600,
     },
     stepDescription: {
         fontSize: '16px',
         color: '#666',
-        marginBottom: '30px',
-        maxWidth: '600px',
+        marginBottom: '40px',
+        maxWidth: '700px',
         marginLeft: 'auto',
         marginRight: 'auto',
     },
@@ -188,16 +192,17 @@ const styles: { [key: string]: React.CSSProperties } = {
     },
     imageCard: {
         cursor: 'pointer',
-        border: '1px solid #ddd',
-        borderRadius: '8px',
+        border: '1px solid #e0e0e0',
+        borderRadius: '12px',
         overflow: 'hidden',
-        transition: 'transform 0.3s, box-shadow 0.3s',
+        transition: 'transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease',
         width: '350px',
         backgroundColor: '#fff',
     },
     imageCardHover: {
-        transform: 'translateY(-5px)',
-        boxShadow: '0 8px 16px rgba(0,0,0,0.15)',
+        transform: 'translateY(-8px)',
+        boxShadow: '0 12px 24px rgba(0,0,0,0.1)',
+        borderColor: '#007bff',
     },
     imageThumbnail: {
         width: '100%',
@@ -212,7 +217,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     },
     colorSelector: {
         border: '1px solid #e0e0e0',
-        borderRadius: '8px',
+        borderRadius: '12px',
         overflow: 'hidden',
         marginBottom: '30px',
     },
@@ -220,31 +225,32 @@ const styles: { [key: string]: React.CSSProperties } = {
         display: 'flex',
         backgroundColor: '#f9f9f9',
         flexWrap: 'wrap',
+        borderBottom: '1px solid #e0e0e0',
     },
     tabButton: {
         flex: '1 1 auto',
         padding: '15px',
         border: 'none',
-        borderBottom: '2px solid transparent',
-        borderRight: '1px solid #e0e0e0',
+        borderBottom: '3px solid transparent',
         background: 'none',
         cursor: 'pointer',
         fontSize: '16px',
         fontWeight: 500,
         color: '#555',
+        transition: 'color 0.3s, border-bottom-color 0.3s',
     },
     tabButtonActive: {
         color: '#007bff',
-        borderBottom: '2px solid #007bff',
+        borderBottomColor: '#007bff',
         backgroundColor: '#fff',
     },
     palette: {
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, 100px)',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))',
         justifyContent: 'center',
-        gap: '15px',
-        padding: '20px',
-        maxHeight: '400px',
+        gap: '20px',
+        padding: '25px',
+        maxHeight: '450px',
         overflowY: 'auto',
         backgroundColor: '#fff',
     },
@@ -253,25 +259,30 @@ const styles: { [key: string]: React.CSSProperties } = {
         flexDirection: 'column',
         alignItems: 'center',
         textAlign: 'center',
-        padding: '5px 0',
+        cursor: 'pointer',
     },
     swatch: {
-        width: '70px',
-        height: '70px',
-        borderRadius: '8px',
+        width: '60px',
+        height: '60px',
+        borderRadius: '50%',
         cursor: 'pointer',
-        border: '2px solid #ccc',
-        transition: 'transform 0.2s',
+        border: '3px solid #f0f0f0',
+        transition: 'transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease',
+    },
+    swatchHover: {
+        borderColor: '#007bff',
+        transform: 'scale(1.08)',
     },
     swatchSelected: {
-        border: '3px solid #007bff',
-        transform: 'scale(1.1)',
-        boxShadow: '0 0 10px rgba(0, 123, 255, 0.5)',
+        borderColor: '#007bff',
+        transform: 'scale(1.15)',
+        boxShadow: '0 0 12px rgba(0, 123, 255, 0.6)',
     },
     swatchLabel: {
         marginTop: '8px',
-        fontSize: '14px',
-        fontWeight: 'bold',
+        fontSize: '13px',
+        fontWeight: '500',
+        color: '#444'
     },
     loadMoreButton: {
         marginTop: '20px',
@@ -281,23 +292,26 @@ const styles: { [key: string]: React.CSSProperties } = {
         backgroundColor: '#f0f0f0',
         border: '1px solid #ccc',
         borderRadius: '5px',
+        transition: 'background-color 0.2s, border-color 0.2s',
     },
     selectedColorsTray: {
         marginTop: '30px',
         padding: '20px',
         backgroundColor: '#f9f9f9',
         border: '1px solid #e0e0e0',
-        borderRadius: '8px',
+        borderRadius: '12px',
     },
     selectedColorsTitle: {
         textAlign: 'left',
         margin: '0 0 15px 0',
+        fontWeight: 600,
     },
     selectedColorsGrid: {
         display: 'flex',
-        gap: '15px',
+        gap: '20px',
         flexWrap: 'wrap',
-        minHeight: '100px',
+        minHeight: '80px',
+        alignItems: 'center',
     },
     primaryButton: {
         marginTop: '30px',
@@ -308,19 +322,19 @@ const styles: { [key: string]: React.CSSProperties } = {
         backgroundColor: '#28a745',
         color: 'white',
         border: 'none',
-        borderRadius: '5px',
-        transition: 'background-color 0.3s',
+        borderRadius: '8px',
+        transition: 'background-color 0.3s, transform 0.2s',
     },
     mixingContainer: {
         backgroundColor: 'white',
         padding: '30px',
-        borderRadius: '8px',
-        boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
+        borderRadius: '12px',
+        boxShadow: '0 6px 16px rgba(0,0,0,0.07)',
     },
     mixingLayout: {
         display: 'grid',
-        gridTemplateColumns: '2fr 1fr',
-        gap: '30px',
+        gridTemplateColumns: '1fr 420px',
+        gap: '40px',
     },
     imageDisplayContainer: {
         textAlign: 'center',
@@ -329,6 +343,9 @@ const styles: { [key: string]: React.CSSProperties } = {
         position: 'relative',
         maxWidth: '100%',
         display: 'inline-block',
+        borderRadius: '8px',
+        overflow: 'hidden',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
     },
     svgOverlay: {
         position: 'absolute',
@@ -340,61 +357,40 @@ const styles: { [key: string]: React.CSSProperties } = {
     clickableArea: {
         cursor: 'pointer',
         transition: 'fill 0.2s, stroke 0.2s, stroke-width 0.2s',
-        mixBlendMode: 'overlay',
+        mixBlendMode: 'multiply',
     },
     areaLabel: {
-        fill: 'red',
+        fill: '#fff',
         fontSize: '60px',
         fontWeight: 'bold',
         textAnchor: 'middle',
         pointerEvents: 'none',
-        textShadow: '0 1px 3px rgba(0,0,0,0.5)',
+        textShadow: '0 1px 5px rgba(0,0,0,0.7)',
     },
     colorTools: {
         display: 'flex',
         flexDirection: 'column',
-        gap: '20px',
+        gap: '25px',
     },
     toolSection: {
         border: '1px solid #ddd',
-        borderRadius: '8px',
-        padding: '15px',
+        borderRadius: '12px',
+        padding: '20px',
+        backgroundColor: '#fdfdfd',
+        display: 'flex',
+        flexDirection: 'column',
     },
     toolTitle: {
         margin: '0 0 15px 0',
-        fontSize: '18px',
+        fontSize: '20px',
+        fontWeight: 600,
+        borderBottom: '1px solid #eee',
+        paddingBottom: '10px'
     },
     paletteGrid: {
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(60px, 1fr))',
-        gap: '10px',
-    },
-    suggestionCard: {
-        border: '1px solid #ccc',
-        borderRadius: '5px',
-        padding: '10px',
-        marginBottom: '10px',
-        cursor: 'pointer',
-    },
-    suggestionColors: {
-        display: 'flex',
-        gap: '5px',
-        marginBottom: '10px',
-    },
-    suggestionColorDot: {
-        width: '25px',
-        height: '25px',
-        borderRadius: '50%',
-    },
-    suggestionReason: {
-        fontSize: '14px',
-        color: '#555',
-    },
-    actionButtons: {
-        marginTop: '20px',
-        display: 'flex',
-        justifyContent: 'space-between',
-        gap: '10px',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(65px, 1fr))',
+        gap: '15px',
     },
     secondaryButton: {
         padding: '12px 25px',
@@ -403,16 +399,17 @@ const styles: { [key: string]: React.CSSProperties } = {
         backgroundColor: '#6c757d',
         color: 'white',
         border: 'none',
-        borderRadius: '5px',
+        borderRadius: '8px',
+        transition: 'background-color 0.3s, transform 0.2s',
     },
     loader: {
-        border: '5px solid #f3f3f3',
-        borderTop: '5px solid #3498db',
+        border: '4px solid #f3f3f3',
+        borderTop: '4px solid #3498db',
         borderRadius: '50%',
-        width: '50px',
-        height: '50px',
+        width: '24px',
+        height: '24px',
         animation: 'spin 1s linear infinite',
-        margin: '20px auto',
+        margin: '10px auto',
     },
     swatchContainerRelative: {
         position: 'relative',
@@ -420,12 +417,11 @@ const styles: { [key: string]: React.CSSProperties } = {
         flexDirection: 'column',
         alignItems: 'center',
         textAlign: 'center',
-        padding: '5px 0',
     },
     removeButton: {
         position: 'absolute',
-        top: -5,
-        right: -5,
+        top: -8,
+        right: -8,
         width: '24px',
         height: '24px',
         borderRadius: '50%',
@@ -444,13 +440,101 @@ const styles: { [key: string]: React.CSSProperties } = {
         transition: 'background-color 0.2s, color 0.2s',
         zIndex: 10,
     },
+    aiStyleGrid: {
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: '10px',
+        marginBottom: '10px',
+    },
+    aiStyleButton: {
+        padding: '8px 15px',
+        fontSize: '14px',
+        border: '1px solid #ccc',
+        borderRadius: '20px',
+        background: '#f5f5f5',
+        cursor: 'pointer',
+        transition: 'background-color 0.2s, border-color 0.2s, color 0.2s',
+    },
+    chatContainer: {
+      display: 'flex',
+      flexDirection: 'column',
+      height: '350px',
+      flex: '1 1 auto'
+    },
+    chatHistory: {
+        flex: 1,
+        overflowY: 'auto',
+        padding: '10px',
+        border: '1px solid #eee',
+        borderRadius: '8px',
+        marginBottom: '15px',
+        backgroundColor: '#f9f9f9',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '12px',
+    },
+    chatMessage: {
+        padding: '10px 15px',
+        borderRadius: '18px',
+        maxWidth: '85%',
+        wordWrap: 'break-word',
+        lineHeight: 1.4,
+    },
+    userMessage: {
+        backgroundColor: '#007bff',
+        color: 'white',
+        alignSelf: 'flex-end',
+        borderBottomRightRadius: '4px',
+    },
+    modelMessage: {
+        backgroundColor: '#e9e9eb',
+        color: '#333',
+        alignSelf: 'flex-start',
+        borderBottomLeftRadius: '4px',
+    },
+    systemMessage: {
+        fontSize: '13px',
+        fontStyle: 'italic',
+        color: '#6c757d',
+        textAlign: 'center',
+        width: '100%',
+        padding: '5px 0',
+    },
+    chatInputForm: {
+        display: 'flex',
+        gap: '10px',
+        marginTop: '10px',
+    },
+    chatInput: {
+        flex: 1,
+        padding: '12px',
+        fontSize: '14px',
+        borderRadius: '20px',
+        border: '1px solid #ccc',
+        outline: 'none',
+    },
+    chatSubmitButton: {
+        padding: '10px 20px',
+        fontSize: '14px',
+        fontWeight: 'bold',
+        backgroundColor: '#007bff',
+        color: 'white',
+        border: 'none',
+        borderRadius: '20px',
+        cursor: 'pointer',
+        transition: 'background-color 0.2s',
+    },
 };
 
 // --- REACT COMPONENTS ---
 
 const Header = () => (
     <header style={styles.header}>
-        <h1 style={styles.headerTitle}>Phối màu Lavis Brothers Coating</h1>
+        <img 
+            src="https://coating.lavisbrothers.com/wp-content/uploads/2022/08/cropped-coating-white-288x77.png" 
+            alt="Lavis Brothers Coating Logo" 
+            style={styles.logo}
+        />
     </header>
 );
 
@@ -462,7 +546,7 @@ const StepIndicator = ({ currentStep, onStepClick }: { currentStep: number; onSt
                 const stepNumber = index + 1;
                 const isClickable = stepNumber < currentStep;
                 return (
-                    <div
+                    <button
                         key={step}
                         style={{
                             ...styles.step,
@@ -470,9 +554,10 @@ const StepIndicator = ({ currentStep, onStepClick }: { currentStep: number; onSt
                             cursor: isClickable ? 'pointer' : 'default',
                         }}
                         onClick={() => isClickable && onStepClick(stepNumber)}
+                        disabled={!isClickable && currentStep !== stepNumber}
                     >
                         {step}
-                    </div>
+                    </button>
                 );
             })}
         </div>
@@ -514,6 +599,7 @@ const Step2_ColorSelection = ({ onNextStep, selectedColors, onToggleColor }: {
 }) => {
     const [activeTab, setActiveTab] = useState<string>(Object.keys(colorData)[0]);
     const [visibleCount, setVisibleCount] = useState(100);
+    const [hoveredColor, setHoveredColor] = useState<string | null>(null);
     const PALETTE_PAGE_SIZE = 100;
 
     useEffect(() => {
@@ -533,7 +619,7 @@ const Step2_ColorSelection = ({ onNextStep, selectedColors, onToggleColor }: {
     return (
         <div style={styles.stepContainer}>
             <h2 style={styles.stepTitle}>Bước 2: Chọn màu sơn bạn yêu thích</h2>
-            <p style={styles.stepDescription}>Bạn có thể chọn một hoặc nhiều màu để bắt đầu phối.</p>
+            <p style={styles.stepDescription}>Bạn có thể chọn một hoặc nhiều màu để bắt đầu phối. Màu đã chọn sẽ xuất hiện ở khay bên dưới.</p>
             
             <div style={styles.colorSelector}>
                 <div style={styles.tabs}>
@@ -551,9 +637,21 @@ const Step2_ColorSelection = ({ onNextStep, selectedColors, onToggleColor }: {
                     {currentPalette.slice(0, visibleCount).map(color => {
                         const hex = lab2rgb(color.l, color.a, color.b);
                         const isSelected = selectedColors.some(c => c.id === color.id);
+                        const isHovered = hoveredColor === color.id;
                         return (
-                            <div key={color.id} style={styles.swatchContainer} onClick={() => onToggleColor(color)}>
-                                <div style={{ ...styles.swatch, backgroundColor: hex, ...(isSelected ? styles.swatchSelected : {}) }}></div>
+                            <div 
+                                key={color.id} 
+                                style={styles.swatchContainer} 
+                                onClick={() => onToggleColor(color)}
+                                onMouseEnter={() => setHoveredColor(color.id)}
+                                onMouseLeave={() => setHoveredColor(null)}
+                            >
+                                <div style={{ 
+                                    ...styles.swatch, 
+                                    backgroundColor: hex, 
+                                    ...(isSelected ? styles.swatchSelected : {}),
+                                    ...(isHovered && !isSelected ? styles.swatchHover : {})
+                                }}></div>
                                 <span style={styles.swatchLabel}>{color.id}</span>
                             </div>
                         );
@@ -582,35 +680,47 @@ const Step2_ColorSelection = ({ onNextStep, selectedColors, onToggleColor }: {
                 </div>
             </div>
             
-            <button onClick={handleNextStep} style={styles.primaryButton}>Tiếp tục</button>
+            <button 
+              onClick={handleNextStep} 
+              style={{ ...styles.primaryButton, ':hover': { filter: 'brightness(90%)' } }}
+              onMouseOver={e => e.currentTarget.style.filter = 'brightness(90%)'}
+              onMouseOut={e => e.currentTarget.style.filter = 'brightness(100%)'}
+            >Tiếp tục</button>
         </div>
     );
 };
 
-const Step3_ColorMixing = ({ image, selectedColors, onReset, onColorRemove }: {
+const Step3_ColorMixing = ({ image, selectedColors, onReset, onColorRemove, onSetSelectedColors }: {
     image: PredefinedImage,
     selectedColors: Color[],
     onReset: () => void,
-    onColorRemove: (color: Color) => void
+    onColorRemove: (color: Color) => void,
+    onSetSelectedColors: (colors: Color[]) => void,
 }) => {
-    const [activeColor, setActiveColor] = useState<string>(lab2rgb(selectedColors[0].l, selectedColors[0].a, selectedColors[0].b));
+    const [activeColor, setActiveColor] = useState<string>(selectedColors.length > 0 ? lab2rgb(selectedColors[0].l, selectedColors[0].a, selectedColors[0].b) : '');
     const [areaColors, setAreaColors] = useState<Record<string, string>>({});
     const [draggedOverArea, setDraggedOverArea] = useState<string | null>(null);
     const svgRef = useRef<SVGSVGElement>(null);
+    
+    // AI State
+    const chatRef = useRef<Chat | null>(null);
+    const [isAiLoading, setIsAiLoading] = useState(false);
+    const [chatHistory, setChatHistory] = useState<{ role: 'user' | 'model' | 'system'; text: string }[]>([]);
+    const [userInput, setUserInput] = useState('');
+    const chatHistoryRef = useRef<HTMLDivElement>(null);
 
-    const [editableAreas, setEditableAreas] = useState<SvgArea[]>(() => JSON.parse(JSON.stringify(image.areas)));
-    const [isEditMode, setIsEditMode] = useState(false);
-    const [draggedItem, setDraggedItem] = useState<{
-        type: 'vertex' | 'polygon';
-        areaId: string;
-        pointIndex?: number;
-        startPos: { x: number, y: number };
-        originalPoints?: { x: number, y: number }[];
-    } | null>(null);
+    const aiStyles = [
+        {id: 'hien-dai', name: 'Hiện đại'},
+        {id: 'toi-gian', name: 'Tối giản'},
+        {id: 'am-cung', name: 'Ấm cúng'},
+        {id: 'phong-thuy', name: 'Phong thủy'},
+        {id: 'tuoi-sang', name: 'Tươi sáng'},
+        {id: 'sang-trong', name: 'Sang trọng'},
+    ];
     
     useEffect(() => {
         const init: Record<string, string> = {};
-        const firstColor = lab2rgb(selectedColors[0].l, selectedColors[0].a, selectedColors[0].b);
+        const firstColor = selectedColors.length > 0 ? lab2rgb(selectedColors[0].l, selectedColors[0].a, selectedColors[0].b) : '#cccccc';
         setActiveColor(firstColor);
         image.areas.forEach(a => {
             if (a.id !== 'window-area' && a.id !== 'floor') {
@@ -618,103 +728,106 @@ const Step3_ColorMixing = ({ image, selectedColors, onReset, onColorRemove }: {
             }
         });
         setAreaColors(init);
-        setEditableAreas(JSON.parse(JSON.stringify(image.areas)));
     }, [image.id]);
 
     useEffect(() => {
         const activeColorExists = selectedColors.some(c => lab2rgb(c.l, c.a, c.b) === activeColor);
         if (!activeColorExists && selectedColors.length > 0) {
             setActiveColor(lab2rgb(selectedColors[0].l, selectedColors[0].a, selectedColors[0].b));
+        } else if (selectedColors.length === 0) {
+            setActiveColor('');
         }
     }, [selectedColors, activeColor]);
-
-    const getSvgCoordinates = (event: MouseEvent | React.MouseEvent) => {
-        if (!svgRef.current) return { x: 0, y: 0 };
-        const pt = svgRef.current.createSVGPoint();
-        pt.x = event.clientX;
-        pt.y = event.clientY;
-        const screenCTM = svgRef.current.getScreenCTM();
-        return screenCTM ? pt.matrixTransform(screenCTM.inverse()) : { x: 0, y: 0 };
-    };
-
-    const parsePoints = (pointsStr: string): { x: number, y: number }[] => {
-        const pairs = pointsStr.split(' ');
-        return pairs.map(pair => {
-            const coords = pair.split(',');
-            return { x: parseFloat(coords[0]), y: parseFloat(coords[1]) };
-        });
-    };
-
-    const stringifyPoints = (points: { x: number, y: number }[]): string => {
-        return points.map(p => `${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(' ');
-    };
     
-    const calculateCentroid = (points: { x: number, y: number }[]): { x: number, y: number } => {
-        let area = 0, cx = 0, cy = 0;
-        for (let i = 0; i < points.length; i++) {
-            const p1 = points[i];
-            const p2 = points[(i + 1) % points.length];
-            const crossProduct = (p1.x * p2.y - p2.x * p1.y);
-            area += crossProduct;
-            cx += (p1.x + p2.x) * crossProduct;
-            cy += (p1.y + p2.y) * crossProduct;
-        }
-        area /= 2;
-        if (Math.abs(area) < 1e-6) { // Fallback for collinear points
-            return points.reduce((acc, p) => ({ x: acc.x + p.x / points.length, y: acc.y + p.y / points.length }), { x: 0, y: 0 });
-        }
-        return { x: cx / (6 * area), y: cy / (6 * area) };
-    };
-
-    const handleVertexMouseDown = (e: React.MouseEvent, areaId: string, pointIndex: number) => {
-        if (!isEditMode) return;
-        e.stopPropagation();
-        setDraggedItem({ type: 'vertex', areaId, pointIndex, startPos: getSvgCoordinates(e) });
-    };
-    
-    const handlePolygonMouseDown = (e: React.MouseEvent, areaId: string) => {
-        if (!isEditMode) return;
-        const currentArea = editableAreas.find(a => a.id === areaId);
-        if (!currentArea) return;
-        setDraggedItem({ type: 'polygon', areaId, startPos: getSvgCoordinates(e), originalPoints: parsePoints(currentArea.points) });
-    };
-
-    const handleMouseMove = useCallback((event: MouseEvent) => {
-        if (!draggedItem || !isEditMode) return;
-        
-        const { x, y } = getSvgCoordinates(event);
-        const dx = x - draggedItem.startPos.x;
-        const dy = y - draggedItem.startPos.y;
-
-        setEditableAreas(prevAreas => prevAreas.map(area => {
-            if (area.id !== draggedItem.areaId) return area;
-
-            if (draggedItem.type === 'vertex' && draggedItem.pointIndex !== undefined) {
-                const points = parsePoints(area.points);
-                points[draggedItem.pointIndex] = { x, y };
-                return { ...area, points: stringifyPoints(points), labelPos: calculateCentroid(points) };
-            }
-
-            if (draggedItem.type === 'polygon' && draggedItem.originalPoints) {
-                const newPoints = draggedItem.originalPoints.map(p => ({ x: p.x + dx, y: p.y + dy }));
-                return { ...area, points: stringifyPoints(newPoints), labelPos: { x: area.labelPos.x + dx, y: area.labelPos.y + dy } };
-            }
-            return area;
-        }));
-    }, [draggedItem, isEditMode]);
-
-    const handleMouseUp = useCallback(() => {
-        setDraggedItem(null);
-    }, []);
-
     useEffect(() => {
-        window.addEventListener('mousemove', handleMouseMove);
-        window.addEventListener('mouseup', handleMouseUp);
-        return () => {
-            window.removeEventListener('mousemove', handleMouseMove);
-            window.removeEventListener('mouseup', handleMouseUp);
-        };
-    }, [handleMouseMove, handleMouseUp]);
+        if (chatHistoryRef.current) {
+            chatHistoryRef.current.scrollTop = chatHistoryRef.current.scrollHeight;
+        }
+    }, [chatHistory]);
+
+    // Initialize Chat
+    useEffect(() => {
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const allColors = Object.values(colorData).flat();
+        const systemInstruction = `Bạn là một chuyên gia tư vấn màu sơn của Lavis Brothers, một thương hiệu sơn cao cấp. Nhiệm vụ của bạn là trò chuyện với khách hàng một cách thân thiện và chuyên nghiệp để hiểu về không gian (hiện tại là: "${image.name}"), sở thích, và cảm xúc mong muốn của họ. Từ đó, tư vấn một bộ 5 màu sơn phù hợp.
+
+        QUY TẮC TUYỆT ĐỐI BẠN PHẢI TUÂN THỦ:
+        1. Chỉ được phép đề xuất 5 MÃ MÀU từ danh sách JSON sau đây: ${JSON.stringify(allColors.map(c => c.id))}. Không được bịa ra bất kỳ mã màu nào không có trong danh sách.
+        2. Sau khi đã tư vấn và khách hàng có vẻ hài lòng, hãy kết thúc cuộc trò chuyện bằng cách trả về một đối tượng JSON DUY NHẤT chứa các màu đề xuất. Đối tượng JSON này PHẢI nằm trong một khối mã markdown riêng biệt, ví dụ: \`\`\`json ... \`\`\`.
+        3. Cấu trúc của JSON phải chính xác như sau:
+        {
+          "suggestions": [
+            { "id": "MÃ MÀU 1", "reason": "Lý do ngắn gọn tại sao màu này phù hợp." },
+            { "id": "MÃ MÀU 2", "reason": "Lý do ngắn gọn." },
+            { "id": "MÃ MÀU 3", "reason": "Lý do ngắn gọn." },
+            { "id": "MÃ MÀU 4", "reason": "Lý do ngắn gọn." },
+            { "id": "MÃ MÀU 5", "reason": "Lý do ngắn gọn." }
+          ]
+        }
+        4. Đừng trả về JSON ngay lập tức. Hãy trò chuyện trước để thu thập đủ thông tin. Ví dụ, nếu khách hàng chọn "Phong thủy", hãy hỏi năm sinh của họ để tư vấn mệnh và màu sắc phù hợp. Nếu họ nói "không gian ấm cúng", hãy hỏi thêm về ánh sáng trong phòng hoặc đồ nội thất.
+        5. Giọng văn phải chuyên nghiệp, hữu ích và mang tính thương hiệu Lavis Brothers.`;
+
+        chatRef.current = ai.chats.create({
+            model: 'gemini-2.5-flash',
+            history: [{ role: 'user', parts: [{ text: systemInstruction }] }],
+        });
+
+        const initialGreeting = { role: 'model' as const, text: "Chào bạn, tôi là trợ lý màu sắc của Lavis Brothers. Tôi có thể giúp bạn chọn bộ màu ưng ý cho không gian này. Bạn đang có ý tưởng gì không, hay muốn bắt đầu với một phong cách có sẵn bên dưới?" };
+        setChatHistory([initialGreeting]);
+    }, [image.name]);
+
+    const parseAndApplyColors = useCallback((text: string) => {
+        try {
+            const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/);
+            if (jsonMatch && jsonMatch[1]) {
+                const resultJson = JSON.parse(jsonMatch[1]);
+                if (resultJson.suggestions && resultJson.suggestions.length > 0) {
+                     const allColorsFlat = Object.values(colorData).flat();
+                     const newPalette: Color[] = resultJson.suggestions
+                         .map((suggestion: {id: string}) => allColorsFlat.find(c => c.id === suggestion.id))
+                         .filter((color: Color | undefined): color is Color => color !== undefined);
+    
+                     if (newPalette.length > 0) {
+                         onSetSelectedColors(newPalette);
+                         setChatHistory(prev => [...prev, { role: 'system', text: "Bảng màu của bạn đã được cập nhật theo gợi ý! Bạn có thể bắt đầu kéo thả màu vào không gian." }]);
+                     }
+                }
+            }
+        } catch (e) {
+            console.log("Response is not a color suggestion, continuing chat.");
+        }
+    }, [onSetSelectedColors]);
+
+    const handleSendMessage = useCallback(async (message: string) => {
+        if (!message.trim() || isAiLoading || !chatRef.current) return;
+        
+        const newUserMessage = { role: 'user' as const, text: message };
+        setChatHistory(prev => [...prev, newUserMessage]);
+        setUserInput('');
+        setIsAiLoading(true);
+    
+        try {
+            const response = await chatRef.current.sendMessage({ message });
+            const responseText = response.text;
+            
+            setChatHistory(prev => [...prev, { role: 'model', text: responseText }]);
+            parseAndApplyColors(responseText);
+    
+        } catch (error) {
+            console.error("Error sending message to AI:", error);
+            setChatHistory(prev => [...prev, { role: 'system', text: "Xin lỗi, đã có lỗi xảy ra. Vui lòng thử lại." }]);
+        } finally {
+            setIsAiLoading(false);
+        }
+    }, [isAiLoading, parseAndApplyColors]);
+
+    const handleStyleClick = (style: {id: string, name: string}) => {
+        let prompt = `Hãy gợi ý cho tôi một bộ màu theo phong cách ${style.name.toLowerCase()}.`;
+        if (style.id === 'phong-thuy') {
+            prompt += ' Bạn có thể hỏi tôi năm sinh để tư vấn chính xác hơn.';
+        }
+        handleSendMessage(prompt);
+    };
 
     const handleShowSaveInstructions = () => {
         alert(
@@ -733,34 +846,26 @@ Sau đó bạn có thể lưu lại ảnh từ các ứng dụng trên.`
                 <div style={styles.imageDisplayContainer}>
                     <h3 style={styles.stepTitle}>Phối màu trực tiếp</h3>
                     <p style={styles.stepDescription}>Nhấn vào một màu bên phải để chọn, sau đó nhấn vào khu vực trên ảnh để tô màu. Hoặc, kéo và thả màu vào khu vực bạn muốn.</p>
-                    <div style={{ display: 'grid', width: '100%', position: 'relative' }}>
+                    <div style={styles.imageWrapper}>
                         <img
                             src={image.url}
                             alt={image.name}
                             style={{
-                                gridArea: '1 / 1 / 2 / 2',
                                 width: '100%',
                                 height: 'auto',
-                                pointerEvents: 'none',
-                                userSelect: 'none',
+                                display: 'block'
                             }}
                         />
                         <svg
                             ref={svgRef}
                             viewBox={image.viewBox}
                             preserveAspectRatio="xMidYMid meet"
-                            style={{
-                                gridArea: '1 / 1 / 2 / 2',
-                                width: '100%',
-                                height: '100%',
-                                pointerEvents: 'auto',
-                                zIndex: 5,
-                            }}
+                            style={styles.svgOverlay}
                         >
-                            {editableAreas.filter(area => area.id !== 'floor').map(area => (
+                            {image.areas.filter(area => area.id !== 'floor').map(area => (
                                 <g
                                     key={area.id}
-                                    onClick={() => !isEditMode && setAreaColors(prev => ({ ...prev, [area.id]: activeColor }))}
+                                    onClick={() => setAreaColors(prev => ({ ...prev, [area.id]: activeColor }))}
                                     onDragOver={(e) => e.preventDefault()}
                                     onDragEnter={(e) => { e.preventDefault(); setDraggedOverArea(area.id); }}
                                     onDragLeave={(e) => { e.preventDefault(); setDraggedOverArea(null); }}
@@ -776,36 +881,18 @@ Sau đó bạn có thể lưu lại ảnh từ các ứng dụng trên.`
                                 >
                                     <polygon
                                         points={area.points}
-                                        onMouseDown={(e) => handlePolygonMouseDown(e, area.id)}
                                         style={{
                                             ...styles.clickableArea,
-                                            fill: areaColors[area.id] ? hexToRgba(areaColors[area.id], 0.40) : 'rgba(255, 0, 0, 0.05)',
-                                            stroke: draggedOverArea === area.id ? '#007bff' : (areaColors[area.id] || area.id === 'window-area' ? 'transparent' : 'red'),
-                                            strokeWidth: draggedOverArea === area.id ? 15 : (areaColors[area.id] || area.id === 'window-area' ? 0 : 3),
-                                            cursor: isEditMode ? 'move' : styles.clickableArea.cursor,
+                                            fill: areaColors[area.id] || 'transparent',
+                                            stroke: draggedOverArea === area.id ? '#007bff' : 'rgba(255,255,255,0.5)',
+                                            strokeWidth: draggedOverArea === area.id ? 15 : 3,
                                         }}
                                     />
-                                    {area.id !== 'window-area' && !areaColors[area.id] && (
+                                     {area.id !== 'window-area' && !areaColors[area.id] && (
                                         <text x={area.labelPos.x} y={area.labelPos.y} style={styles.areaLabel}>+</text>
                                     )}
                                 </g>
                             ))}
-                             {isEditMode && editableAreas.filter(area => area.id !== 'floor').flatMap(area =>
-                                parsePoints(area.points).map((point, index) => (
-                                    <circle
-                                        key={`${area.id}-p${index}`}
-                                        cx={point.x}
-                                        cy={point.y}
-                                        r="15"
-                                        fill="rgba(0, 123, 255, 0.7)"
-                                        stroke="white"
-                                        strokeWidth="2"
-                                        cursor="move"
-                                        style={{ pointerEvents: 'all' }}
-                                        onMouseDown={(e) => handleVertexMouseDown(e, area.id, index)}
-                                    />
-                                ))
-                            )}
                         </svg>
                     </div>
                 </div>
@@ -828,7 +915,7 @@ Sau đó bạn có thể lưu lại ảnh từ các ứng dụng trên.`
                                                 document.body.style.cursor = 'default';
                                                 setDraggedOverArea(null);
                                             }}
-                                            style={{ ...styles.swatch, backgroundColor: hex, width: 60, height: 60, cursor: 'grab', ...(activeColor === hex ? styles.swatchSelected : {}) }}
+                                            style={{ ...styles.swatch, backgroundColor: hex, cursor: 'grab', ...(activeColor === hex ? styles.swatchSelected : {}) }}
                                             onClick={() => setActiveColor(hex)}
                                         />
                                         <button onClick={() => onColorRemove(color)} style={styles.removeButton}>&times;</button>
@@ -838,34 +925,54 @@ Sau đó bạn có thể lưu lại ảnh từ các ứng dụng trên.`
                             })}
                         </div>
                     </div>
-                    
-                    <div style={styles.toolSection}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-                            <h4 style={styles.toolTitle}>Chế độ chỉnh sửa</h4>
-                            <input type="checkbox" checked={isEditMode} onChange={e => setIsEditMode(e.target.checked)} style={{ transform: 'scale(1.5)' }}/>
-                        </div>
-                        <p style={{fontSize: 14, color: '#666', margin: 0}}>Bật để kéo thả các điểm hoặc toàn bộ vùng phủ để điều chỉnh.</p>
-                    </div>
 
-                    {isEditMode && (
-                        <div style={styles.toolSection}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-                                <h4 style={styles.toolTitle}>Toạ độ các lớp phủ</h4>
-                                <button onClick={() => navigator.clipboard.writeText(JSON.stringify(editableAreas, null, 2))} style={{padding: '5px 10px', cursor: 'pointer'}}>
-                                    Sao chép
-                                </button>
+                    <div style={{...styles.toolSection, flex: 1}}>
+                        <h4 style={styles.toolTitle}>Trợ lý màu sắc AI</h4>
+                        <div style={styles.chatContainer}>
+                            <div ref={chatHistoryRef} style={styles.chatHistory}>
+                                {chatHistory.map((msg, index) => (
+                                    <div 
+                                      key={index} 
+                                      style={{
+                                        ...styles.chatMessage, 
+                                        ...(msg.role === 'user' ? styles.userMessage : msg.role === 'model' ? styles.modelMessage : styles.systemMessage)
+                                      }}
+                                    >
+                                        {msg.text.split(/```json[\s\S]*```/)[0]}
+                                    </div>
+                                ))}
+                                {isAiLoading && <div style={styles.loader}></div>}
                             </div>
-                            <textarea
-                                readOnly
-                                style={{ width: '100%', height: '150px', whiteSpace: 'pre', overflow: 'auto', fontFamily: 'monospace', fontSize: '12px', border: '1px solid #ccc', borderRadius: '4px', padding: '10px', backgroundColor: '#f9f9f9', resize: 'vertical' }}
-                                value={JSON.stringify(editableAreas.map(a => ({ id: a.id, points: a.points, labelPos: {x: a.labelPos.x.toFixed(2), y: a.labelPos.y.toFixed(2)} })), null, 2)}
-                            />
+                            <p style={{fontSize: 14, color: '#666', margin: '0 0 10px 0', textAlign: 'center'}}>Bắt đầu nhanh bằng cách chọn một phong cách:</p>
+                            <div style={styles.aiStyleGrid}>
+                                {aiStyles.map(style => (
+                                    <button 
+                                        key={style.id}
+                                        onClick={() => handleStyleClick(style)}
+                                        style={styles.aiStyleButton}
+                                        disabled={isAiLoading}
+                                    >
+                                        {style.name}
+                                    </button>
+                                ))}
+                            </div>
+                            <form onSubmit={(e) => { e.preventDefault(); handleSendMessage(userInput); }} style={styles.chatInputForm}>
+                                <input 
+                                    type="text"
+                                    value={userInput}
+                                    onChange={e => setUserInput(e.target.value)}
+                                    placeholder="Hoặc trò chuyện về ý tưởng của bạn..."
+                                    style={styles.chatInput}
+                                    disabled={isAiLoading}
+                                />
+                                <button type="submit" style={styles.chatSubmitButton} disabled={isAiLoading || !userInput.trim()}>Gửi</button>
+                            </form>
                         </div>
-                    )}
-
-                    <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
+                    </div>
+                    
+                    <div style={{ display: 'flex', gap: 10 }}>
                         <button onClick={onReset} style={styles.secondaryButton}>Làm lại từ đầu</button>
-                        <button onClick={handleShowSaveInstructions} style={{ ...styles.primaryButton, flex: 1, backgroundColor: '#007bff' }}>Hướng dẫn lưu ảnh</button>
+                        <button onClick={handleShowSaveInstructions} style={{ ...styles.primaryButton, flex: 1, marginTop: 0, backgroundColor: '#007bff' }}>Hướng dẫn lưu ảnh</button>
                     </div>
                 </div>
             </div>
@@ -886,6 +993,9 @@ const App = () => {
             @keyframes spin {
                 0% { transform: rotate(0deg); }
                 100% { transform: rotate(360deg); }
+            }
+            button:hover, div[role="button"]:hover {
+                filter: brightness(95%);
             }
         `;
         document.head.appendChild(styleSheet);
@@ -916,6 +1026,10 @@ const App = () => {
 
     const handleRemoveColor = useCallback((colorToRemove: Color) => {
         setSelectedColors(prev => prev.filter(c => c.id !== colorToRemove.id));
+    }, []);
+
+    const handleSetSelectedColors = useCallback((newColors: Color[]) => {
+        setSelectedColors(newColors);
     }, []);
 
     const handleProceedToMixing = () => {
@@ -960,10 +1074,9 @@ const App = () => {
                                 selectedColors={selectedColors} 
                                 onReset={handleReset} 
                                 onColorRemove={handleRemoveColor}
+                                onSetSelectedColors={handleSetSelectedColors}
                             />;
                 }
-                // If we land here without colors/image, something is wrong, reset.
-                // The useEffect hook will handle navigation if colors run out.
                 return null;
             default:
                 return <Step1_ImageSelection onImageSelect={handleImageSelect} />;
