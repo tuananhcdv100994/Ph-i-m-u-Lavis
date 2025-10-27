@@ -43,14 +43,14 @@ const predefinedImages: PredefinedImage[] = [
 {
   id: 'interior-lavis-auto-2',
   name: 'Không gian nội thất - Mẫu 2',
-  url: 'https://simplythebest.vn/wp-content/uploads/2025/10/pngtree-minimalist-living-space-a-bright-and-empty-white-room-interior-3d-image_13593960.png',
+  url: 'https://simplythebest.vn/wp-content/uploads/2025/10/minimalist-white-living-room.jpg',
   viewBox: '0 0 1920 1080',
   areas: [
-    { id: 'left-wall', points: '0.00,172.57 319.47,327.03 314.81,758.46 4.65,856.41', labelPos: { x: 147.89715832621144, y: 526.1809556736165 } },
-    { id: 'back-wall', points: '317.14,336.36 1450.51,336.36 1443.52,751.46 314.81,756.13', labelPos: { x: 880.440026158362, y: 544.9357206357013 } },
-    { id: 'right-wall', points: '1448.18,341.02 1923.92,100.82 1914.59,907.71 1443.52,751.46', labelPos: { x: 1708.2465674323519, y: 522.9635313118794 } },
-    { id: 'floor', points: '0,910 650,830 1350,830 1920,910 1920,1280 0,1280', labelPos: { x: 973, y: 1006 } },
-    { id: 'ceiling', points: '-149.27,9.88 1818.98,-20.44 1410.87,285.06 377.77,285.06', labelPos: { x: 870.4544988733553, y: 124.65243410426255 } }
+    { id: 'left-wall', points: '4.78,1115.38 2.39,-189.26 527.12,249.59 524.73,492.87 519.96,686.06 190.82,729.00 145.50,209.04 66.79,1098.68', labelPos: { x: 147.89715832621144, y: 526.1809556736165 } },
+    { id: 'back-wall', points: '524.72,247.21 1397.66,247.21 1400.05,843.48 1099.53,824.40 777.54,824.40 765.62,774.33 634.44,767.17 519.96,686.07', labelPos: { x: 880.440026158362, y: 544.9357206357013 } },
+    { id: 'right-wall', points: '1395.27,247.21 1841.29,-136.79 1915.22,-139.17 1905.68,430.86 1908.07,843.48 1905.68,1110.61 1397.66,845.87 1397.65,471.41', labelPos: { x: 1708.2465674323519, y: 522.9635313118794 } },
+    { id: 'floor', points: '-4.77,1875.97 645.23,1795.97 1345.23,1795.97 1915.23,1875.97 1915.23,2245.97 -4.77,2245.97', labelPos: { x: 973, y: 1006 } },
+    { id: 'ceiling', points: '-149.27,9.88 59.63,-143.94 1843.68,-141.56 1581.32,85.02 1395.28,249.60 934.96,251.98 522.34,249.60 71.55,-129.63', labelPos: { x: 870.4544988733553, y: 124.65243410426255 } }
   ]
 },
 {
@@ -323,7 +323,7 @@ const styles: { [key: string]: React.CSSProperties } = {
         color: 'white',
         border: 'none',
         borderRadius: '8px',
-        transition: 'background-color 0.3s, transform 0.2s',
+        transition: 'background-color 0.3s, transform 0.2s, filter 0.2s',
     },
     mixingContainer: {
         backgroundColor: 'white',
@@ -600,6 +600,7 @@ const Step2_ColorSelection = ({ onNextStep, selectedColors, onToggleColor }: {
     const [activeTab, setActiveTab] = useState<string>(Object.keys(colorData)[0]);
     const [visibleCount, setVisibleCount] = useState(100);
     const [hoveredColor, setHoveredColor] = useState<string | null>(null);
+    const [isButtonHovered, setIsButtonHovered] = useState(false);
     const PALETTE_PAGE_SIZE = 100;
 
     useEffect(() => {
@@ -682,9 +683,9 @@ const Step2_ColorSelection = ({ onNextStep, selectedColors, onToggleColor }: {
             
             <button 
               onClick={handleNextStep} 
-              style={{ ...styles.primaryButton, ':hover': { filter: 'brightness(90%)' } }}
-              onMouseOver={e => e.currentTarget.style.filter = 'brightness(90%)'}
-              onMouseOut={e => e.currentTarget.style.filter = 'brightness(100%)'}
+              style={{ ...styles.primaryButton, ...(isButtonHovered ? { filter: 'brightness(90%)' } : {}) }}
+              onMouseEnter={() => setIsButtonHovered(true)}
+              onMouseLeave={() => setIsButtonHovered(false)}
             >Tiếp tục</button>
         </div>
     );
@@ -862,7 +863,7 @@ Sau đó bạn có thể lưu lại ảnh từ các ứng dụng trên.`
                             preserveAspectRatio="xMidYMid meet"
                             style={styles.svgOverlay}
                         >
-                            {image.areas.filter(area => area.id !== 'floor').map(area => (
+                            {image.areas.filter(area => area.id !== 'floor').map((area) => (
                                 <g
                                     key={area.id}
                                     onClick={() => setAreaColors(prev => ({ ...prev, [area.id]: activeColor }))}
@@ -886,6 +887,7 @@ Sau đó bạn có thể lưu lại ảnh từ các ứng dụng trên.`
                                             fill: areaColors[area.id] || 'transparent',
                                             stroke: draggedOverArea === area.id ? '#007bff' : 'rgba(255,255,255,0.5)',
                                             strokeWidth: draggedOverArea === area.id ? 15 : 3,
+                                            cursor: 'pointer',
                                         }}
                                     />
                                      {area.id !== 'window-area' && !areaColors[area.id] && (
@@ -969,7 +971,7 @@ Sau đó bạn có thể lưu lại ảnh từ các ứng dụng trên.`
                             </form>
                         </div>
                     </div>
-                    
+
                     <div style={{ display: 'flex', gap: 10 }}>
                         <button onClick={onReset} style={styles.secondaryButton}>Làm lại từ đầu</button>
                         <button onClick={handleShowSaveInstructions} style={{ ...styles.primaryButton, flex: 1, marginTop: 0, backgroundColor: '#007bff' }}>Hướng dẫn lưu ảnh</button>
@@ -980,6 +982,70 @@ Sau đó bạn có thể lưu lại ảnh từ các ứng dụng trên.`
     );
 };
 
+const BottomNavBar = ({ currentStep, onStepClick }: { currentStep: number; onStepClick: (step: number) => void; }) => {
+    const navStyles: React.CSSProperties = {
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: '65px',
+        backgroundColor: 'rgba(255, 255, 255, 0.98)',
+        backdropFilter: 'saturate(180%) blur(10px)',
+        WebkitBackdropFilter: 'saturate(180%) blur(10px)',
+        boxShadow: '0 -2px 10px rgba(0,0,0,0.1)',
+        display: 'none', // Hidden by default, shown via media query
+        justifyContent: 'space-around',
+        alignItems: 'flex-start',
+        zIndex: 1000,
+        paddingTop: '8px',
+        paddingBottom: 'calc(8px + env(safe-area-inset-bottom))', // For iPhone notches
+    };
+
+    const linkStyles: React.CSSProperties = {
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        textDecoration: 'none',
+        color: '#555',
+        fontSize: '13px',
+        fontWeight: 500,
+        border: 'none',
+        background: 'none',
+        height: '100%',
+        transition: 'color 0.2s',
+    };
+
+    const activeLinkStyles: React.CSSProperties = {
+        color: '#007bff',
+        fontWeight: 'bold',
+    };
+    
+    const steps = ['Chọn ảnh', 'Chọn màu', 'Phối màu'];
+
+    return (
+        <nav style={navStyles} className="mobile-nav">
+            {steps.map((step, index) => {
+                const stepNumber = index + 1;
+                const isActive = currentStep === stepNumber;
+                const isClickable = stepNumber < currentStep;
+                 return (
+                    <button
+                        key={step}
+                        style={{...linkStyles, ...(isActive ? activeLinkStyles : {})}}
+                        onClick={() => {
+                            if (isClickable) onStepClick(stepNumber);
+                        }}
+                        disabled={!isClickable && !isActive}
+                    >
+                        <span>{stepNumber}. {step}</span>
+                    </button>
+                 );
+            })}
+        </nav>
+    );
+};
 
 const App = () => {
     const [currentStep, setCurrentStep] = useState(1);
@@ -996,6 +1062,99 @@ const App = () => {
             }
             button:hover, div[role="button"]:hover {
                 filter: brightness(95%);
+            }
+
+            /* --- MOBILE STYLES (App-like experience) --- */
+            @media (max-width: 768px) {
+                /* Hide desktop elements */
+                body > #root > main > div:first-child, /* StepIndicator */
+                body > #root > footer { 
+                    display: none !important; 
+                }
+                
+                /* Show mobile elements */
+                .mobile-nav { 
+                    display: flex !important; 
+                }
+
+                /* General Layout & Component Adjustments */
+                body { -webkit-tap-highlight-color: transparent; }
+                
+                body > #root > header { /* Header */
+                    padding: 5px 15px !important;
+                }
+                body > #root > header > img { /* Logo */
+                    height: 45px !important;
+                }
+                body > #root > main { /* Main content area */
+                    padding: 15px !important;
+                    padding-bottom: 90px !important; /* Space for bottom nav */
+                }
+                
+                /* Step Containers */
+                div[style*="padding: 40px"] { /* .stepContainer */
+                     padding: 20px !important;
+                }
+                h2[style*="font-size: 28px"] { /* .stepTitle */
+                    font-size: 22px !important;
+                }
+                p[style*="font-size: 16px"][style*="color: rgb(102, 102, 102)"] { /* .stepDescription */
+                    font-size: 14px !important;
+                    margin-bottom: 25px !important;
+                }
+                button[style*="font-size: 18px"] { /* .primaryButton */
+                    padding: 12px 25px !important;
+                    font-size: 16px !important;
+                }
+
+                /* Step 1: Image Selection */
+                div[style*="justify-content: center"][style*="gap: 30px"] { /* .imageSelectionContainer */
+                    flex-direction: column;
+                    align-items: center;
+                    gap: 20px !important;
+                }
+                 div[style*="width: 350px"] { /* .imageCard */
+                    width: 95% !important;
+                    max-width: 400px;
+                }
+
+                /* Step 2: Color Selection */
+                div[style*="flex-wrap: wrap"][style*="background-color: rgb(249, 249, 249)"] { /* .tabs */
+                    flex-wrap: nowrap !important;
+                    overflow-x: auto;
+                    -ms-overflow-style: none;
+                    scrollbar-width: none;
+                }
+                 div[style*="flex-wrap: wrap"][style*="background-color: rgb(249, 249, 249)"]::-webkit-scrollbar {
+                      display: none;
+                }
+                button[style*="flex: 1 1 auto"] { /* .tabButton */
+                    flex-shrink: 0 !important;
+                }
+                div[style*="grid-template-columns: repeat(auto-fill, minmax(80px, 1fr))"] { /* .palette */
+                     grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)) !important;
+                     gap: 15px !important;
+                     padding: 20px !important;
+                }
+                div[style*="padding: 20px"][style*="background-color: rgb(249, 249, 249)"] { /* .selectedColorsTray */
+                     padding: 15px !important;
+                }
+
+                /* Step 3: Mixing */
+                div[style*="background-color: white"][style*="padding: 30px"] { /* .mixingContainer */
+                     padding: 20px 15px !important;
+                }
+                 div[style*="grid-template-columns: 1fr 420px"] { /* .mixingLayout */
+                    display: flex !important;
+                    flex-direction: column !important;
+                    gap: 30px !important;
+                }
+                div[style*="flex-direction: column"][style*="gap: 25px"] { /* .colorTools */
+                    gap: 20px !important;
+                }
+                 div[style*="height: 350px"] { /* .chatContainer */
+                     height: 320px !important;
+                }
             }
         `;
         document.head.appendChild(styleSheet);
@@ -1056,6 +1215,12 @@ const App = () => {
         }
     };
 
+    const handleMobileStepClick = (step: number) => {
+        if (step < currentStep) {
+            setCurrentStep(step);
+        }
+    };
+
 
     const renderStep = () => {
         switch (currentStep) {
@@ -1091,8 +1256,9 @@ const App = () => {
                 {renderStep()}
             </main>
             <footer style={styles.footer}>
-                <p>&copy; 2024 Lavis Brothers Coating. All rights reserved.</p>
+                <p>&copy; 2025 Lavis Brothers Coating. All rights reserved.</p>
             </footer>
+            <BottomNavBar currentStep={currentStep} onStepClick={handleMobileStepClick} />
         </div>
     );
 };
