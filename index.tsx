@@ -748,33 +748,39 @@ const Step3_ColorMixing = ({ image, selectedColors, onReset, onColorRemove, onSe
 
     // Initialize Chat
     useEffect(() => {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        const allColors = Object.values(colorData).flat();
-        const systemInstruction = `Bạn là một chuyên gia tư vấn màu sơn của Lavis Brothers, một thương hiệu sơn cao cấp. Nhiệm vụ của bạn là trò chuyện với khách hàng một cách thân thiện và chuyên nghiệp để hiểu về không gian (hiện tại là: "${image.name}"), sở thích, và cảm xúc mong muốn của họ. Từ đó, tư vấn một bộ 5 màu sơn phù hợp.
+        try {
+            const API_KEY = 'AIzaSyCLhybte8ncn7Mu4yZkiJCYMbz79MLRDwc';
+            const ai = new GoogleGenAI({ apiKey: API_KEY });
+            const allColors = Object.values(colorData).flat();
+            const systemInstruction = `Bạn là một chuyên gia tư vấn màu sơn của Lavis Brothers, một thương hiệu sơn cao cấp. Nhiệm vụ của bạn là trò chuyện với khách hàng một cách thân thiện và chuyên nghiệp để hiểu về không gian (hiện tại là: "${image.name}"), sở thích, và cảm xúc mong muốn của họ. Từ đó, tư vấn một bộ 5 màu sơn phù hợp.
 
-        QUY TẮC TUYỆT ĐỐI BẠN PHẢI TUÂN THỦ:
-        1. Chỉ được phép đề xuất 5 MÃ MÀU từ danh sách JSON sau đây: ${JSON.stringify(allColors.map(c => c.id))}. Không được bịa ra bất kỳ mã màu nào không có trong danh sách.
-        2. Sau khi đã tư vấn và khách hàng có vẻ hài lòng, hãy kết thúc cuộc trò chuyện bằng cách trả về một đối tượng JSON DUY NHẤT chứa các màu đề xuất. Đối tượng JSON này PHẢI nằm trong một khối mã markdown riêng biệt, ví dụ: \`\`\`json ... \`\`\`.
-        3. Cấu trúc của JSON phải chính xác như sau:
-        {
-          "suggestions": [
-            { "id": "MÃ MÀU 1", "reason": "Lý do ngắn gọn tại sao màu này phù hợp." },
-            { "id": "MÃ MÀU 2", "reason": "Lý do ngắn gọn." },
-            { "id": "MÃ MÀU 3", "reason": "Lý do ngắn gọn." },
-            { "id": "MÃ MÀU 4", "reason": "Lý do ngắn gọn." },
-            { "id": "MÃ MÀU 5", "reason": "Lý do ngắn gọn." }
-          ]
+            QUY TẮC TUYỆT ĐỐI BẠN PHẢI TUÂN THỦ:
+            1. Chỉ được phép đề xuất 5 MÃ MÀU từ danh sách JSON sau đây: ${JSON.stringify(allColors.map(c => c.id))}. Không được bịa ra bất kỳ mã màu nào không có trong danh sách.
+            2. Sau khi đã tư vấn và khách hàng có vẻ hài lòng, hãy kết thúc cuộc trò chuyện bằng cách trả về một đối tượng JSON DUY NHẤT chứa các màu đề xuất. Đối tượng JSON này PHẢI nằm trong một khối mã markdown riêng biệt, ví dụ: \`\`\`json ... \`\`\`.
+            3. Cấu trúc của JSON phải chính xác như sau:
+            {
+              "suggestions": [
+                { "id": "MÃ MÀU 1", "reason": "Lý do ngắn gọn tại sao màu này phù hợp." },
+                { "id": "MÃ MÀU 2", "reason": "Lý do ngắn gọn." },
+                { "id": "MÃ MÀU 3", "reason": "Lý do ngắn gọn." },
+                { "id": "MÃ MÀU 4", "reason": "Lý do ngắn gọn." },
+                { "id": "MÃ MÀU 5", "reason": "Lý do ngắn gọn." }
+              ]
+            }
+            4. Đừng trả về JSON ngay lập tức. Hãy trò chuyện trước để thu thập đủ thông tin. Ví dụ, nếu khách hàng chọn "Phong thủy", hãy hỏi năm sinh của họ để tư vấn mệnh và màu sắc phù hợp. Nếu họ nói "không gian ấm cúng", hãy hỏi thêm về ánh sáng trong phòng hoặc đồ nội thất.
+            5. Giọng văn phải chuyên nghiệp, hữu ích và mang tính thương hiệu Lavis Brothers.`;
+
+            chatRef.current = ai.chats.create({
+                model: 'gemini-2.5-flash',
+                history: [{ role: 'user', parts: [{ text: systemInstruction }] }],
+            });
+
+            const initialGreeting = { role: 'model' as const, text: "Chào bạn, tôi là trợ lý màu sắc của Lavis Brothers. Tôi có thể giúp bạn chọn bộ màu ưng ý cho không gian này. Bạn đang có ý tưởng gì không, hay muốn bắt đầu với một phong cách có sẵn bên dưới?" };
+            setChatHistory([initialGreeting]);
+        } catch (error) {
+            console.error("Failed to initialize AI assistant:", error);
+            setChatHistory([{ role: 'system', text: "Không thể khởi tạo trợ lý AI. Vui lòng kiểm tra lại API Key hoặc kết nối mạng." }]);
         }
-        4. Đừng trả về JSON ngay lập tức. Hãy trò chuyện trước để thu thập đủ thông tin. Ví dụ, nếu khách hàng chọn "Phong thủy", hãy hỏi năm sinh của họ để tư vấn mệnh và màu sắc phù hợp. Nếu họ nói "không gian ấm cúng", hãy hỏi thêm về ánh sáng trong phòng hoặc đồ nội thất.
-        5. Giọng văn phải chuyên nghiệp, hữu ích và mang tính thương hiệu Lavis Brothers.`;
-
-        chatRef.current = ai.chats.create({
-            model: 'gemini-2.5-flash',
-            history: [{ role: 'user', parts: [{ text: systemInstruction }] }],
-        });
-
-        const initialGreeting = { role: 'model' as const, text: "Chào bạn, tôi là trợ lý màu sắc của Lavis Brothers. Tôi có thể giúp bạn chọn bộ màu ưng ý cho không gian này. Bạn đang có ý tưởng gì không, hay muốn bắt đầu với một phong cách có sẵn bên dưới?" };
-        setChatHistory([initialGreeting]);
     }, [image.name]);
 
     const parseAndApplyColors = useCallback((text: string) => {
@@ -963,7 +969,7 @@ Sau đó bạn có thể lưu lại ảnh từ các ứng dụng trên.`
                                     type="text"
                                     value={userInput}
                                     onChange={e => setUserInput(e.target.value)}
-                                    placeholder="Hoặc trò chuyện về ý tưởng của bạn..."
+                                    placeholder={"Hoặc trò chuyện về ý tưởng của bạn..."}
                                     style={styles.chatInput}
                                     disabled={isAiLoading}
                                 />
