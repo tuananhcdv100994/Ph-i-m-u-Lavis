@@ -46,11 +46,11 @@ const predefinedImages: PredefinedImage[] = [
   url: 'https://simplythebest.vn/wp-content/uploads/2025/10/minimalist-white-living-room.jpg',
   viewBox: '0 0 1920 1080',
   areas: [
-    { id: 'left-wall', points: '4.78,1115.38 2.39,-189.26 527.12,249.59 524.73,492.87 519.96,686.06 190.82,729.00 145.50,209.04 66.79,1098.68', labelPos: { x: 147.89715832621144, y: 526.1809556736165 } },
-    { id: 'back-wall', points: '524.72,247.21 1397.66,247.21 1400.05,843.48 1099.53,824.40 777.54,824.40 765.62,774.33 634.44,767.17 519.96,686.07', labelPos: { x: 880.440026158362, y: 544.9357206357013 } },
-    { id: 'right-wall', points: '1395.27,247.21 1841.29,-136.79 1915.22,-139.17 1905.68,430.86 1908.07,843.48 1905.68,1110.61 1397.66,845.87 1397.65,471.41', labelPos: { x: 1708.2465674323519, y: 522.9635313118794 } },
-    { id: 'floor', points: '-4.77,1875.97 645.23,1795.97 1345.23,1795.97 1915.23,1875.97 1915.23,2245.97 -4.77,2245.97', labelPos: { x: 973, y: 1006 } },
-    { id: 'ceiling', points: '-149.27,9.88 59.63,-143.94 1843.68,-141.56 1581.32,85.02 1395.28,249.60 934.96,251.98 522.34,249.60 71.55,-129.63', labelPos: { x: 870.4544988733553, y: 124.65243410426255 } }
+    { id: 'left-wall', points: '4.78,1115.38 3.58,463.06 2.39,-189.26 527.12,249.59 524.72,511.96 524.72,688.45 190.82,729.00 145.50,209.04 106.15,653.86 66.79,1098.68', labelPos: { x: 147.89715832621144, y: 526.1809556736165 } },
+    { id: 'back-wall', points: '524.72,247.21 961.19,247.21 1397.66,247.21 1404.82,733.77 1297.49,709.92 1295.11,313.99 770.39,313.99 765.61,771.93 612.97,767.16 522.34,671.76', labelPos: { x: 880.440026158362, y: 544.9357206357013 } },
+    { id: 'right-wall', points: '1395.27,247.21 1817.44,-122.48 1841.29,-136.79 1915.22,-139.17 1905.68,430.86 1908.07,843.48 1905.68,1110.61 1645.71,981.82 1397.66,853.02 1397.65,471.41', labelPos: { x: 1708.2465674323519, y: 522.9635313118794 } },
+    { id: 'floor', points: '-4.77,1875.97 645.23,1795.97 995.23,1795.97 1345.23,1795.97 1915.23,1875.97 1915.23,2245.97 1435.23,2245.97 955.23,2245.97 475.23,2245.97 -4.77,2245.97', labelPos: { x: 973, y: 1006 } },
+    { id: 'ceiling', points: '-149.27,9.88 59.63,-143.94 505.64,-143.34 951.66,-142.75 1843.68,-141.56 1581.32,85.02 1395.28,249.60 934.96,251.98 522.34,249.60 71.55,-129.63', labelPos: { x: 870.4544988733553, y: 124.65243410426255 } }
   ]
 },
 {
@@ -402,6 +402,17 @@ const styles: { [key: string]: React.CSSProperties } = {
         borderRadius: '8px',
         transition: 'background-color 0.3s, transform 0.2s',
     },
+    tertiaryButton: {
+        padding: '8px 15px',
+        fontSize: '14px',
+        cursor: 'pointer',
+        backgroundColor: '#f0f0f0',
+        color: '#333',
+        border: '1px solid #ccc',
+        borderRadius: '5px',
+        margin: '10px 5px',
+        transition: 'background-color 0.2s',
+    },
     loader: {
         border: '4px solid #f3f3f3',
         borderTop: '4px solid #3498db',
@@ -719,6 +730,8 @@ const Step3_ColorMixing = ({ image, selectedColors, onReset, onColorRemove, onSe
         {id: 'sang-trong', name: 'Sang trọng'},
     ];
     
+    // --- Component Lifecycle & Effects ---
+    
     useEffect(() => {
         const init: Record<string, string> = {};
         const firstColor = selectedColors.length > 0 ? lab2rgb(selectedColors[0].l, selectedColors[0].a, selectedColors[0].b) : '#cccccc';
@@ -853,6 +866,7 @@ Sau đó bạn có thể lưu lại ảnh từ các ứng dụng trên.`
                 <div style={styles.imageDisplayContainer}>
                     <h3 style={styles.stepTitle}>Phối màu trực tiếp</h3>
                     <p style={styles.stepDescription}>Nhấn vào một màu bên phải để chọn, sau đó nhấn vào khu vực trên ảnh để tô màu. Hoặc, kéo và thả màu vào khu vực bạn muốn.</p>
+                    
                     <div style={styles.imageWrapper}>
                         <img
                             src={image.url}
@@ -1068,6 +1082,12 @@ const App = () => {
             }
             button:hover, div[role="button"]:hover {
                 filter: brightness(95%);
+            }
+            circle[cursor="grab"]:hover {
+                fill: rgba(0, 100, 255, 0.9);
+            }
+            circle[cursor="grab"]:active {
+                cursor: grabbing;
             }
 
             /* --- MOBILE STYLES (App-like experience) --- */
